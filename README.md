@@ -1,4 +1,4 @@
-# Kookies
+# Kookies   <img src= "./cookie-icon.svg" height="30px" width="30px"/>
 #### Javascript Class for working with cookies
 * Supports SSR
 * Supports custom server
