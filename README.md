@@ -1,7 +1,6 @@
 # Kookies
 #### Javascript Class for working with cookies
 * Supports SSR
-<br/>
 * Supports custom server
 
 #### Methods:
