@@ -1,38 +1,44 @@
-class Cookie {
-  constructor() {  }
-  
-  set(name: string, value: string | number, {options}?: any) {
+class Kookie {
+  set(name: string, value: any, { options }: { options: any } = { options: {} }) {
     const { res, expires, path, ...restOptions } = options || {};
+
     if (typeof document !== 'undefined') {
-      document.cookie = `${name}=${value};path=${path || '/'};expires=${this.setExpireDate(expire)}`;
+      document.cookie = `${name}=${value};path=${path || '/'};expires=${this.setExpireDate(expires)}`;
     }
-    if (res) {
-      res.cookie(name, value, { maxAge: this.setExpireDate(expire, res), path: path || '/' });
+
+    if (res?.setHeader) {
+      res.setHeader('Set-Cookie', `${name}=${value};path=${path || '/'};expires=${this.setExpireDate(expires)}`);
+    }
+
+    if (res?.cookie) {
+      res.cookie(name, value, { maxAge: this.setExpireDate(expires, res), path: path || '/' });
     }
   }
 
-  setMultiple(pairs: any[], res?: any) {
-    pairs.map((cookie) => {
+  setMultiple(cookieList: any[], res?: any) {
+    cookieList.map((cookie) => {
       const { name, value, ...rest } = cookie || {};
-      this.set(name, value, { res, ...rest });
+      this.set(name, value, { options: { res, ...rest } });
     });
   }
 
   get(name: string, req?: any) {
-    let cookies = '';
-    if (typeof document !== 'undefined') cookies = document.cookie;
-    if (req) cookies = req.headers.cookie;
-    const targetCookie = cookies.match(`(^|;) ?${name}=([^;]*)(;|$)`);
+    try {
+      let cookies = '';
+      if (typeof document !== 'undefined') cookies = document.cookie;
+      if (req) cookies = req.headers.cookie;
+      const targetCookie = cookies.match(`(^|;) ?${name}=([^;]*)(;|$)`);
 
-    if (cookies && targetCookie) {
-      const unescapedName = unescape(targetCookie[2]);
-      return [`[`, `{`].some(el => unescapedName.includes(el)) ? JSON.parse(unescapedName) : unescapedName;
-    } else {
+      if (cookies && targetCookie) {
+        const unescapedName = unescape(targetCookie[2]);
+        return [`[`, `{`].some((el) => unescapedName.includes(el)) ? JSON.parse(unescapedName) : unescapedName;
+      }
+    } catch (e) {
       return undefined;
     }
   }
 
-  getMultiple(names: string[], req?: any) {
+  getMultiple(names: any[], req?: any) {
     const allCookies = req ? this.getAll(req) : typeof document !== 'undefined' ? this.getAll() : {};
     let matchCookies = {};
     names.map((name) => (matchCookies[name] = allCookies[name]));
@@ -42,25 +48,28 @@ class Cookie {
   getAll(req?: any) {
     let formattedCookies = [];
     let allCookies = {};
-    
     if (typeof document !== 'undefined') formattedCookies = document.cookie.split(';');
+    if (req) formattedCookies = req?.headers?.cookie?.split(';');
 
-    if (req) formattedCookies = req.headers.cookie.split(';');
-
-    formattedCookies.map(cookie => {
-      const cookieName = cookie.split('=')[0].trim();
-      allCookies[cookieName] = this.get(cookieName,req);
-    });
-
+    formattedCookies?.length &&
+      formattedCookies.map((cookie) => {
+        const cookieName = cookie.split('=')[0].trim();
+        allCookies[cookieName] = this.get(cookieName, req);
+      });
     return allCookies;
   }
 
   remove(name: string, res?: any) {
     if (typeof document !== 'undefined') document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    if (res) res.clearCookie(name);
+
+    if (res?.setHeader) {
+      res.setHeader('Set-Cookie', name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;');
+    }
+
+    if (res?.clearCookie) res.clearCookie(name);
   }
 
-  removeMultiple(names: string[], res?: any) {
+  removeMultiple(names: any[], res?: any) {
     names.map((name) => this.remove(name, res));
   }
 
@@ -72,7 +81,8 @@ class Cookie {
   }
 
   private setExpireDate(expire: number, res?: any) {
-    let expireTime = 24 * 60 * 60 * 1000 * (expire || 365);
+    const expireTime = 24 * 60 * 60 * 1000 * (+expire || 365);
+
     if (res) {
       return expireTime;
     } else {
@@ -82,5 +92,4 @@ class Cookie {
     }
   }
 }
-
-module.exports = new Cookie();
+export default new Kookie();
